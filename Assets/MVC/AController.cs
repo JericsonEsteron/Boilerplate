@@ -10,7 +10,6 @@ namespace MVC
         private V _view;
         private M _model;
         
-        protected V View => _view;
         protected M Model => _model;
 
         protected abstract void OnModelBound();
