@@ -7,7 +7,7 @@ namespace ObserverPattern
 {
     public interface IDisposable
     {
-        public void AddSubjectInDisposable<IEvent>(Subject<IEvent> observer, Observer observerClass);
+        public void AddSubjectInDisposable<IEvent>(Subject<IEvent> observer, Observer observerInstance);
     }
 
 }

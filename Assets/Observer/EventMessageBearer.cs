@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using ObserverPattern;
 
-namespace Messenger
+namespace EventMessage
 {
-    public class MessageBearer
+    public class EventMessageBearer
     {
         public static readonly IMessenger Default = new Observer();
     }

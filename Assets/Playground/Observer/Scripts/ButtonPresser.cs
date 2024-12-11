@@ -1,7 +1,7 @@
 using Events;
 using UnityEngine;
 using UnityEngine.UI;
-using Messenger;
+using EventMessage;
 
 public class ButtonPresser : MonoBehaviour
 {
@@ -16,7 +16,7 @@ public class ButtonPresser : MonoBehaviour
     {
         
         Debug.Log("BUTTON PRESSED PUBLISH");
-        MessageBearer.Default.Publish<ButtonPressedEvent>(new ButtonPressedEvent("Hallo"));
-        MessageBearer.Default.GetDictionary();
+        EventMessageBearer.Default.Publish<ButtonPressedEvent>(new ButtonPressedEvent("Hallo"));
+        EventMessageBearer.Default.GetDictionary();
     }
 }

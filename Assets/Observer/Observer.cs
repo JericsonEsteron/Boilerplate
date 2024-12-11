@@ -2,7 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Messenger;
+using EventMessage;
 using UnityEngine;
 
 namespace ObserverPattern
@@ -55,7 +55,7 @@ namespace ObserverPattern
             }
             else
             {
-                disposable = gameObject.AddComponent<Dispose>();
+                disposable = gameObject.AddComponent<DisposalHandler>();
                 disposable.AddSubjectInDisposable(observer, this);
             }
         }
