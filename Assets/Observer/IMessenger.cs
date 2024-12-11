@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using ObserverPattern;
 
-namespace Messenger
+namespace EventMessage
 {
     public interface IMessenger : IObservable, IObserver
     {

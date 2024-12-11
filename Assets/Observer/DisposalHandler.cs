@@ -7,15 +7,15 @@ using UnityEngine;
 namespace ObserverPattern
 {
     [DisallowMultipleComponent]
-    public class Dispose : MonoBehaviour, IDisposable
+    public class DisposalHandler : MonoBehaviour, IDisposable
     {
-        private Observer observerClass;
+        private Observer observerInstance;
         private Dictionary<Type, List<object>> disposableDict = new Dictionary<Type, List<object>>();
         
-        public void AddSubjectInDisposable<IEvent>(Subject<IEvent> observer, Observer observerClass)
+        public void AddSubjectInDisposable<IEvent>(Subject<IEvent> observer, Observer observerInstance)
         {
             List<object> observers;
-            this.observerClass = observerClass;
+            this.observerInstance = observerInstance;
             if(disposableDict.TryGetValue(typeof(IEvent), out observers))
             {
                 observers.Add(observer);
@@ -35,7 +35,7 @@ namespace ObserverPattern
         {
             foreach (Type key in disposableDict.Keys)
             {
-                if(observerClass.observerDict.TryGetValue(key, out List<object> observers))
+                if(observerInstance.observerDict.TryGetValue(key, out List<object> observers))
                 {
                     observers.RemoveAll(observer => disposableDict[key].Contains(observer));
                 }
