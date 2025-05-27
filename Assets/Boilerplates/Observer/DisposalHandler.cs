@@ -35,9 +35,9 @@ namespace ObserverPattern
         {
             foreach (Type key in disposableDict.Keys)
             {
-                if(observerInstance.observerDict.TryGetValue(key, out List<object> observers))
+                foreach (var observer in disposableDict[key])
                 {
-                    observers.RemoveAll(observer => disposableDict[key].Contains(observer));
+                    observerInstance.UnSubscribe(key, observer);
                 }
             }
         }

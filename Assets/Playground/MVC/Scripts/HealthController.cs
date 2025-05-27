@@ -16,13 +16,13 @@ namespace Playground.MVC
             _healthModel.CurrentHealth.Value = Mathf.Clamp(_healthModel.CurrentHealth.Value - damageValue, 0, _healthModel.CurrentHealth.Value);
         }
 
-        protected override void OnModelBound()
+        protected override void OnModelBound(HealthModel model)
         {
-            _healthModel = Model;
+            _healthModel = model;
             InitializeValues();
         }
 
-        protected override void OnModelUnBound()
+        protected override void OnModelUnBound(HealthModel model)
         {
             _healthModel = default;
         }
