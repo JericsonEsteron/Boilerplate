@@ -12,13 +12,13 @@ namespace Playground.MVC
 
         private HealthModel _healthModel;
 
-        protected override void OnModelBound()
+        protected override void OnModelBound(HealthModel model)
         {
-            _healthModel = Model;
+            _healthModel = model;
             _healthModel.CurrentHealth.OnValueChanged += OnHealthChanged;
         }
 
-        protected override void OnModelUnBound()
+        protected override void OnModelUnBound(HealthModel model)
         {
             _healthModel.CurrentHealth.OnValueChanged -= OnHealthChanged;
             _healthModel = default;

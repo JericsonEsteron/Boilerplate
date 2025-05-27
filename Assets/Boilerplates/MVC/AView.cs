@@ -9,21 +9,24 @@ namespace MVC
     {
         private M _model;
 
-        protected M Model => _model;
+        protected abstract void OnModelBound(M model);
+        protected abstract void OnModelUnBound(M model);
 
-        protected abstract void OnModelBound();
-        protected abstract void OnModelUnBound();
+        protected virtual void OnDestroy() 
+        {
+            UnBind();
+        }
 
         public void Bind(M model)
         {
             _model = model;
-            OnModelBound();
+            OnModelBound(_model);
         }
 
         public void UnBind()
         {
             _model = default;
-            OnModelUnBound();
+            OnModelUnBound(_model);
         }
     }
 
