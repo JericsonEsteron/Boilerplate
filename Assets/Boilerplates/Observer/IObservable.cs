@@ -1,12 +1,10 @@
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+using Events;
 
 namespace ObserverPattern
 {
     public interface IObservable
     {
-        public void Publish<IEvent>(IEvent eventMessage);
+        public void Publish<TEvent>(TEvent eventMessage) where TEvent : IEvent;
     }
 
 }

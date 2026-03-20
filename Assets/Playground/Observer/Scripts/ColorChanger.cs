@@ -1,5 +1,4 @@
-using System.Collections;
-using System.Collections.Generic;
+using System;
 using EventMessage;
 using Events;
 using UnityEngine;
@@ -7,15 +6,37 @@ using UnityEngine.UI;
 
 public class ColorChanger : MonoBehaviour
 {
-    [SerializeField] Image image;
+    [SerializeField] private Image _image;
+    private IDisposable _subscription;
 
-    private void Awake() 
+    private void Awake()
     {
-        EventMessenger.Default.Subscribe<ButtonPressedEvent>(ButtonPressedEvent, this.gameObject);
+        if (_image == null)
+            _image = GetComponent<Image>();
     }
 
-    private void ButtonPressedEvent(ButtonPressedEvent buttonPressedEvent)
+    private void OnEnable()
     {
-        Debug.Log("BUTTON PRESSED " + buttonPressedEvent.message);
+        _subscription = EventMessenger.Default.Subscribe<ButtonPressedEvent>(OnButtonPressed);
+    }
+
+    private void OnDisable()
+    {
+        _subscription?.Dispose();
+        _subscription = null;
+    }
+
+    private void OnButtonPressed(ButtonPressedEvent buttonPressedEvent)
+    {
+        Debug.Log("BUTTON PRESSED " + buttonPressedEvent.Message);
+
+        if (_image != null)
+            _image.color = UnityEngine.Random.ColorHSV();
+    }
+
+    private void OnValidate()
+    {
+        if (_image == null)
+            _image = GetComponent<Image>();
     }
 }

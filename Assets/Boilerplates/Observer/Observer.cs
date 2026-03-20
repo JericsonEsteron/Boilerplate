@@ -1,144 +1,99 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using UnityEngine;
+using Events;
 using EventMessage;
 
 namespace ObserverPattern
 {
-    public class Observer : IMessenger, IDisposeCollector
+    public class Observer : IMessenger
     {
-        private readonly Dictionary<Type, List<ISubject>> observerDict = new();
-        private readonly Dictionary<Type, List<ISubject>> observersToRemove = new();
-        private readonly object _lock = new();
+        private readonly Dictionary<Type, IEventBucket> _buckets = new();
+        private readonly int _mainThreadId = Thread.CurrentThread.ManagedThreadId;
 
-        private int publishDepth = 0;
-
-        public void Publish<IEvent>(IEvent eventMessage)
+        public void Publish<TEvent>(TEvent eventMessage) where TEvent : IEvent
         {
-            List<ISubject> snapshot;
+            EnsureMainThread();
 
-            lock (_lock)
-            {
-                if (!observerDict.TryGetValue(typeof(IEvent), out var observers))
-                    return;
+            if (eventMessage == null)
+                throw new ArgumentNullException(nameof(eventMessage));
 
-                publishDepth++;
-                snapshot = new List<ISubject>(observers);
-            }
+            if (!_buckets.TryGetValue(typeof(TEvent), out var bucket))
+                return;
 
-            foreach (var subject in snapshot)
-            {
-                subject.Invoke(eventMessage);
-            }
-
-            lock (_lock)
-            {
-                publishDepth--;
-
-                if (publishDepth == 0)
-                    RemoveObservers();
-            }
+            ((EventBucket<TEvent>)bucket).Publish(eventMessage);
         }
 
-        public void Subscribe<IEvent>(Action<IEvent> observer, GameObject gameObject)
+        public IDisposable Subscribe<TEvent>(Action<TEvent> observer) where TEvent : IEvent
         {
-            var newObserver = new Subject<IEvent>(observer);
-            var type = typeof(IEvent);
+            return Subscribe(observer, null);
+        }
 
-            lock (_lock)
+        public IDisposable Subscribe<TEvent>(Action<TEvent> observer, GameObject owner) where TEvent : IEvent
+        {
+            EnsureMainThread();
+
+            if (observer == null)
+                throw new ArgumentNullException(nameof(observer), "Observer callback cannot be null");
+
+            var bucket = GetOrCreateBucket<TEvent>();
+            var subscription = (EventSubscription)bucket.Subscribe(observer);
+
+            if (owner != null)
+                RegisterOwnerSubscription(subscription, owner);
+
+            return subscription;
+        }
+
+        internal void RemoveBucket(Type eventType)
+        {
+            _buckets.Remove(eventType);
+        }
+
+        internal void EnsureMainThread()
+        {
+            if (Thread.CurrentThread.ManagedThreadId != _mainThreadId)
+                throw new InvalidOperationException("Observer messenger is main-thread only. Publish, Subscribe, and Dispose must run on Unity's main thread.");
+        }
+
+        private EventBucket<TEvent> GetOrCreateBucket<TEvent>() where TEvent : IEvent
+        {
+            var eventType = typeof(TEvent);
+            if (_buckets.TryGetValue(eventType, out var bucket))
+                return (EventBucket<TEvent>)bucket;
+
+            var createdBucket = new EventBucket<TEvent>(this);
+            _buckets.Add(eventType, createdBucket);
+            return createdBucket;
+        }
+
+        private void RegisterOwnerSubscription(EventSubscription subscription, GameObject owner)
+        {
+            if (owner == null)
+                throw new ArgumentNullException(nameof(owner));
+
+            if (!owner.TryGetComponent<DisposalHandler>(out var disposalHandler))
+                disposalHandler = owner.AddComponent<DisposalHandler>();
+
+            disposalHandler.Track(subscription);
+        }
+
+        #if UNITY_EDITOR
+        public void LogObserverStatus()
+        {
+            if (_buckets.Count == 0)
             {
-                if (!observerDict.TryGetValue(type, out var observers))
-                {
-                    observers = new List<ISubject>();
-                    observerDict.Add(type, observers);
-                }
-
-                observers.Add(newObserver);
+                Debug.Log("[Observer] No observers registered");
+                return;
             }
 
-            AddDisposable(newObserver, gameObject);
-        }
-
-        public void UnSubscribe(Type type, ISubject observer)
-        {
-            lock (_lock)
+            Debug.Log("[Observer] Event Type => Observer Count");
+            foreach (var kvp in _buckets)
             {
-                if (publishDepth == 0)
-                {
-                    if (observerDict.TryGetValue(type, out var observers))
-                    {
-                        observers.Remove(observer);
-                    }
-                }
-                else
-                {
-                    if (!observersToRemove.TryGetValue(type, out var toRemove))
-                    {
-                        toRemove = new List<ISubject>();
-                        observersToRemove[type] = toRemove;
-                    }
-
-                    toRemove.Add(observer);
-                }
+                Debug.Log($"  {kvp.Key.Name}: {kvp.Value.ActiveSubscriptionCount}");
             }
         }
-
-        private void RemoveObservers()
-        {
-            foreach (var pair in observersToRemove)
-            {
-                if (observerDict.TryGetValue(pair.Key, out var observers))
-                {
-                    foreach (var observer in pair.Value)
-                    {
-                        observers.Remove(observer);
-                    }
-                }
-            }
-
-            observersToRemove.Clear();
-        }
-
-        public void AddDisposable<IEvent>(Subject<IEvent> observer, GameObject gameObject)
-        {
-            if (!gameObject.TryGetComponent<DisposalHandler>(out var disposable))
-            {
-                disposable = gameObject.AddComponent<DisposalHandler>();
-            }
-
-            disposable.AddSubjectInDisposable(observer, this);
-        }
-
-        public void GetDictionary()
-        {
-            lock (_lock)
-            {
-                foreach (var key in observerDict.Keys)
-                {
-                    Debug.Log($"{key} : {observerDict[key].Count}");
-                }
-            }
-        }
-    }
-
-    public interface ISubject
-    {
-        void Invoke(object eventMessage);
-    }
-
-    public class Subject<T> : ISubject
-    {
-        private readonly Action<T> _onInvoke;
-
-        public Subject(Action<T> onInvoke)
-        {
-            _onInvoke = onInvoke;
-        }
-
-        public void Invoke(object eventMessage)
-        {
-            if (eventMessage is T casted)
-                _onInvoke?.Invoke(casted);
-        }
+        #endif
     }
 }
