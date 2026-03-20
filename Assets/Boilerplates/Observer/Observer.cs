@@ -1,34 +1,34 @@
 using System;
 using System.Collections.Generic;
-using EventMessage;
 using UnityEngine;
+using EventMessage;
 
 namespace ObserverPattern
 {
     public class Observer : IMessenger, IDisposeCollector
     {
-        private readonly Dictionary<Type, List<object>> observerDict = new();
-        private readonly Dictionary<Type, List<object>> observersToRemove = new();
+        private readonly Dictionary<Type, List<ISubject>> observerDict = new();
+        private readonly Dictionary<Type, List<ISubject>> observersToRemove = new();
         private readonly object _lock = new();
 
         private int publishDepth = 0;
 
         public void Publish<IEvent>(IEvent eventMessage)
         {
-            List<object> observers;
+            List<ISubject> snapshot;
 
             lock (_lock)
             {
-                if (!observerDict.TryGetValue(typeof(IEvent), out observers))
+                if (!observerDict.TryGetValue(typeof(IEvent), out var observers))
                     return;
 
                 publishDepth++;
+                snapshot = new List<ISubject>(observers);
             }
 
-            // Invoke outside lock to avoid deadlocks if user code re-enters
-            foreach (Subject<IEvent> subject in observers)
+            foreach (var subject in snapshot)
             {
-                subject.InvokeAction(eventMessage);
+                subject.Invoke(eventMessage);
             }
 
             lock (_lock)
@@ -49,7 +49,7 @@ namespace ObserverPattern
             {
                 if (!observerDict.TryGetValue(type, out var observers))
                 {
-                    observers = new List<object>();
+                    observers = new List<ISubject>();
                     observerDict.Add(type, observers);
                 }
 
@@ -59,7 +59,7 @@ namespace ObserverPattern
             AddDisposable(newObserver, gameObject);
         }
 
-        public void UnSubscribe(Type type, object observer)
+        public void UnSubscribe(Type type, ISubject observer)
         {
             lock (_lock)
             {
@@ -74,9 +74,10 @@ namespace ObserverPattern
                 {
                     if (!observersToRemove.TryGetValue(type, out var toRemove))
                     {
-                        toRemove = new List<object>();
+                        toRemove = new List<ISubject>();
                         observersToRemove[type] = toRemove;
                     }
+
                     toRemove.Add(observer);
                 }
             }
@@ -100,7 +101,7 @@ namespace ObserverPattern
 
         public void AddDisposable<IEvent>(Subject<IEvent> observer, GameObject gameObject)
         {
-            if (!gameObject.TryGetComponent<IDisposable>(out var disposable))
+            if (!gameObject.TryGetComponent<DisposalHandler>(out var disposable))
             {
                 disposable = gameObject.AddComponent<DisposalHandler>();
             }
@@ -120,19 +121,24 @@ namespace ObserverPattern
         }
     }
 
-    public class Subject<T>
+    public interface ISubject
     {
-        Action<T> OnInvoke;
-
-        public Subject(Action<T> OnInvoke)
-        {
-            this.OnInvoke = OnInvoke;
-        }
-
-        public void InvokeAction(T eventMessage)
-        {
-            OnInvoke?.Invoke(eventMessage);
-        }
+        void Invoke(object eventMessage);
     }
 
+    public class Subject<T> : ISubject
+    {
+        private readonly Action<T> _onInvoke;
+
+        public Subject(Action<T> onInvoke)
+        {
+            _onInvoke = onInvoke;
+        }
+
+        public void Invoke(object eventMessage)
+        {
+            if (eventMessage is T casted)
+                _onInvoke?.Invoke(casted);
+        }
+    }
 }

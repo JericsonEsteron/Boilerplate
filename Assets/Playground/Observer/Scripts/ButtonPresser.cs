@@ -16,7 +16,7 @@ public class ButtonPresser : MonoBehaviour
     {
         
         Debug.Log("BUTTON PRESSED PUBLISH");
-        EventMessageBearer.Default.Publish<ButtonPressedEvent>(new ButtonPressedEvent("Hallo"));
-        EventMessageBearer.Default.GetDictionary();
+        EventMessenger.Default.Publish<ButtonPressedEvent>(new ButtonPressedEvent("Hallo"));
+        EventMessenger.Default.GetDictionary();
     }
 }

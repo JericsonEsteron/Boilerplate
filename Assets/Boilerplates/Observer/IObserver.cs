@@ -10,7 +10,7 @@ namespace ObserverPattern
     public interface IObserver
     {
         public void Subscribe<IEvent>(Action<IEvent> observer, GameObject gameObject);
-        public void UnSubscribe(Type type, object observer);
+        public void UnSubscribe(Type type, ISubject observer);
     }
 
 }
