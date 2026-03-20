@@ -1,7 +1,5 @@
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
 using MVC;
+using UnityEngine;
 using UnityEngine.UI;
 
 namespace Playground.MVC
@@ -10,23 +8,42 @@ namespace Playground.MVC
     {
         [SerializeField] Image _image;
 
-        private HealthModel _healthModel;
-
         protected override void OnModelBound(HealthModel model)
         {
-            _healthModel = model;
-            _healthModel.CurrentHealth.OnValueChanged += OnHealthChanged;
+            if (_image == null)
+                throw new MissingReferenceException($"{GetType().Name} requires an Image reference.");
+
+            model.CurrentHealth.OnValueChanged += OnHealthChanged;
+            model.MaxHealth.OnValueChanged += OnHealthChanged;
+            Refresh();
         }
 
         protected override void OnModelUnBound(HealthModel model)
         {
-            _healthModel.CurrentHealth.OnValueChanged -= OnHealthChanged;
-            _healthModel = default;
+            model.CurrentHealth.OnValueChanged -= OnHealthChanged;
+            model.MaxHealth.OnValueChanged -= OnHealthChanged;
         }
 
         private void OnHealthChanged()
         {
-            _image.fillAmount = Mathf.Clamp(_healthModel.CurrentHealth.Value, 0, _healthModel.MaxHealth.Value) / _healthModel.MaxHealth.Value;
+            Refresh();
+        }
+
+        private void Refresh()
+        {
+            if (Model.MaxHealth.Value <= 0f)
+            {
+                _image.fillAmount = 0f;
+                return;
+            }
+
+            _image.fillAmount = Mathf.Clamp(Model.CurrentHealth.Value, 0f, Model.MaxHealth.Value) / Model.MaxHealth.Value;
+        }
+
+        private void OnValidate()
+        {
+            if (_image == null)
+                _image = GetComponent<Image>();
         }
     }
 
