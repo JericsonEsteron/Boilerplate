@@ -1,7 +1,5 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
 namespace ObserverPattern
@@ -10,37 +8,42 @@ namespace ObserverPattern
     public class DisposalHandler : MonoBehaviour, IDisposable
     {
         private Observer observerInstance;
-        private Dictionary<Type, List<object>> disposableDict = new Dictionary<Type, List<object>>();
-        
+
+        private readonly Dictionary<Type, List<ISubject>> disposableDict = new();
+
         public void AddSubjectInDisposable<IEvent>(Subject<IEvent> observer, Observer observerInstance)
         {
-            List<object> observers;
             this.observerInstance = observerInstance;
-            if(disposableDict.TryGetValue(typeof(IEvent), out observers))
+            var type = typeof(IEvent);
+
+            if (!disposableDict.TryGetValue(type, out var observers))
             {
-                observers.Add(observer);
-                disposableDict[typeof(IEvent)] = observers;
+                observers = new List<ISubject>();
+                disposableDict[type] = observers;
             }
-            else
-            {
-                observers = new List<object>
-                {
-                    observer
-                };
-                disposableDict.Add(typeof(IEvent), observers);
-            }
+
+            observers.Add(observer);
         }
 
-        private void OnDestroy() 
+        private void OnDestroy()
         {
-            foreach (Type key in disposableDict.Keys)
+            if (observerInstance == null)
+                return;
+
+            foreach (var pair in disposableDict)
             {
-                foreach (var observer in disposableDict[key])
+                foreach (var observer in pair.Value)
                 {
-                    observerInstance.UnSubscribe(key, observer);
+                    observerInstance.UnSubscribe(pair.Key, observer);
                 }
             }
+
+            disposableDict.Clear();
+        }
+
+        public void Dispose()
+        {
+            OnDestroy();
         }
     }
-
 }

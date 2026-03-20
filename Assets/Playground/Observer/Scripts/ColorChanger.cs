@@ -11,7 +11,7 @@ public class ColorChanger : MonoBehaviour
 
     private void Awake() 
     {
-        EventMessageBearer.Default.Subscribe<ButtonPressedEvent>(ButtonPressedEvent, this.gameObject);
+        EventMessenger.Default.Subscribe<ButtonPressedEvent>(ButtonPressedEvent, this.gameObject);
     }
 
     private void ButtonPressedEvent(ButtonPressedEvent buttonPressedEvent)
