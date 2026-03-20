@@ -5,18 +5,30 @@ using EventMessage;
 
 public class ButtonPresser : MonoBehaviour
 {
-    [SerializeField] Button button;
+    [SerializeField] private Button _button;
 
-    private void Start() 
+    private void Awake()
     {
-        button.onClick.AddListener(Publish);   
+        if (_button == null)
+            _button = GetComponent<Button>();
+    }
+
+    private void OnEnable()
+    {
+        if (_button == null)
+            throw new MissingReferenceException($"{GetType().Name} requires a Button reference.");
+
+        _button.onClick.AddListener(Publish);
+    }
+
+    private void OnDisable()
+    {
+        if (_button != null)
+            _button.onClick.RemoveListener(Publish);
     }
 
     private void Publish()
     {
-        
-        Debug.Log("BUTTON PRESSED PUBLISH");
         EventMessenger.Default.Publish<ButtonPressedEvent>(new ButtonPressedEvent("Hallo"));
-        EventMessenger.Default.GetDictionary();
     }
 }

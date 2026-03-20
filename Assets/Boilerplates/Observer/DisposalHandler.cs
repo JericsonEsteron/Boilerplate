@@ -5,45 +5,49 @@ using UnityEngine;
 namespace ObserverPattern
 {
     [DisallowMultipleComponent]
-    public class DisposalHandler : MonoBehaviour, IDisposable
+    public sealed class DisposalHandler : MonoBehaviour
     {
-        private Observer observerInstance;
+        private readonly List<EventSubscription> _subscriptions = new();
 
-        private readonly Dictionary<Type, List<ISubject>> disposableDict = new();
-
-        public void AddSubjectInDisposable<IEvent>(Subject<IEvent> observer, Observer observerInstance)
+        internal void Track(EventSubscription subscription)
         {
-            this.observerInstance = observerInstance;
-            var type = typeof(IEvent);
+            if (subscription == null)
+                throw new ArgumentNullException(nameof(subscription));
 
-            if (!disposableDict.TryGetValue(type, out var observers))
-            {
-                observers = new List<ISubject>();
-                disposableDict[type] = observers;
-            }
+            if (_subscriptions.Count > 0 && (_subscriptions.Count & 31) == 0)
+                PruneDisposedSubscriptions();
 
-            observers.Add(observer);
+            _subscriptions.Add(subscription);
         }
 
         private void OnDestroy()
         {
-            if (observerInstance == null)
-                return;
-
-            foreach (var pair in disposableDict)
+            for (var i = _subscriptions.Count - 1; i >= 0; i--)
             {
-                foreach (var observer in pair.Value)
-                {
-                    observerInstance.UnSubscribe(pair.Key, observer);
-                }
+                var subscription = _subscriptions[i];
+                subscription.Dispose();
             }
 
-            disposableDict.Clear();
+            _subscriptions.Clear();
         }
 
-        public void Dispose()
+        private void PruneDisposedSubscriptions()
         {
-            OnDestroy();
+            var writeIndex = 0;
+            for (var readIndex = 0; readIndex < _subscriptions.Count; readIndex++)
+            {
+                var subscription = _subscriptions[readIndex];
+                if (subscription.IsDisposed)
+                    continue;
+
+                if (writeIndex != readIndex)
+                    _subscriptions[writeIndex] = subscription;
+
+                writeIndex++;
+            }
+
+            if (writeIndex < _subscriptions.Count)
+                _subscriptions.RemoveRange(writeIndex, _subscriptions.Count - writeIndex);
         }
     }
 }
