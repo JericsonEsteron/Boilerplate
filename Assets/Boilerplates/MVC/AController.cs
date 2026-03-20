@@ -1,6 +1,3 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace MVC
@@ -10,26 +7,57 @@ namespace MVC
     {
         private V _view;
         private M _model;
+        private bool _isBound;
 
+        protected V View => _view;
+        protected M Model => _model;
+
+        protected virtual void InitializeModel(M model) { }
         protected abstract void OnModelBound(M model);
         protected abstract void OnModelUnBound(M model);
+        protected virtual void OnModelDisposed(M model) { }
 
         protected virtual void Awake()
         {
             _model = CreateModel();
-            _view = FindView();
+            InitializeModel(_model);
 
-            _view.Bind(_model);
+            _view = FindView();
+            if (_view == null)
+                throw new MissingComponentException($"{GetType().Name} requires a {typeof(V).Name} component on the same GameObject.");
         }
         
         protected virtual void OnEnable() 
         {
+            if (_isBound)
+                return;
+
+            _view.Bind(_model);
             OnModelBound(_model);
+            _isBound = true;
+        }
+
+        protected virtual void OnDisable()
+        {
+            if (!_isBound)
+                return;
+
+            OnModelUnBound(_model);
+            _view.UnBind();
+            _isBound = false;
         }
 
         protected virtual void OnDestroy() 
         {
-            OnModelUnBound(_model);
+            if (_isBound)
+            {
+                OnModelUnBound(_model);
+                _view.UnBind();
+                _isBound = false;
+            }
+
+            OnModelDisposed(_model);
+            _model = default;
         }
 
         private M CreateModel()
@@ -46,38 +74,62 @@ namespace MVC
     public abstract class AController<M> : MonoBehaviour, IController where M : IModel, new()
     {
         private M _model;
+        private bool _isBound;
         
         public M Model => _model;
 
+        protected virtual void InitializeModel(M model) { }
         protected abstract void OnModelBound();
         protected abstract void OnModelUnBound();
+        protected virtual void OnModelDisposed(M model) { }
+
+        protected virtual void Awake()
+        {
+            _model = CreateModel();
+            InitializeModel(_model);
+        }
         
         protected void OnEnable() 
         {
             Bind();
         }
 
-        protected void OnDestroy() 
+        protected void OnDisable()
         {
             UnBind();
         }
 
+        protected void OnDestroy() 
+        {
+            if (_isBound)
+            {
+                OnModelUnBound();
+                _isBound = false;
+            }
+
+            OnModelDisposed(_model);
+            _model = default;
+        }
+
         private void Bind()
         {
-            if(_model != null)
+            if(_isBound)
                 return;
 
-            _model = CreateModel();
+            if (_model == null)
+                _model = CreateModel();
+
             OnModelBound();
+            _isBound = true;
         }
 
         private void UnBind()
         {
-            if(_model == null)
+            if(!_isBound)
                 return;
 
-            _model = default;
             OnModelUnBound();
+            _isBound = false;
         }
 
         private M CreateModel()

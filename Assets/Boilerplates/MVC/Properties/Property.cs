@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace MVC
 {
@@ -6,31 +7,46 @@ namespace MVC
     {
         private P _value;
 
+        public Property()
+        {
+        }
+
+        public Property(P initialValue)
+        {
+            _value = initialValue;
+        }
+
         public P Value
         {
             get => _value;
             set
             {
-                if(_value != null && _value.Equals(value))
+                if (EqualityComparer<P>.Default.Equals(_value, value))
                     return;
 
-                OnValueChangedWithPreviousNewValue?.Invoke(_value, value);
-
+                var previousValue = _value;
                 _value = value;
 
-                OnValueChanged?.Invoke();
+                OnValueChangedWithPreviousNewValue?.Invoke(previousValue, _value);
                 OnValueChangedWithNewValue?.Invoke(_value);
-
+                OnValueChanged?.Invoke();
             }
         }
 
-        public Action OnValueChanged;
-        public Action<P> OnValueChangedWithNewValue;
+        public event Action OnValueChanged;
+        public event Action<P> OnValueChangedWithNewValue;
 
         /// <summary>
         /// First P is previous Value, Second is the new Value
         /// </summary>
-        public Action<P, P> OnValueChangedWithPreviousNewValue;
+        public event Action<P, P> OnValueChangedWithPreviousNewValue;
+
+        public void Notify()
+        {
+            OnValueChangedWithPreviousNewValue?.Invoke(_value, _value);
+            OnValueChangedWithNewValue?.Invoke(_value);
+            OnValueChanged?.Invoke();
+        }
     }
 
 }
